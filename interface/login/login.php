@@ -34,6 +34,7 @@ use OpenEMR\Events\Core\TemplatePageEvent;
 use OpenEMR\Services\FacilityService;
 use OpenEMR\Services\LogoService;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use OpenEMR\Common\Logging\SystemLogger;
 
 $ignoreAuth = true;
 // Set $sessionAllowWrite to true to prevent session concurrency issues during authorization related code
@@ -243,6 +244,9 @@ $viewArgs = [
 $ed = $GLOBALS['kernel']->getEventDispatcher();
 
 $templatePageEvent = new TemplatePageEvent('login/login.php', [], $layout, $viewArgs);
+(new SystemLogger())->error("-------------------------------");
+(new SystemLogger())->error($templatePageEvent->getTwigTemplate());
 $event = $ed->dispatch($templatePageEvent, TemplatePageEvent::RENDER_EVENT);
-
+(new SystemLogger())->error($event->getTwigTemplate());
+(new SystemLogger())->error("IN LOGIN.PHP");
 echo $t->render($event->getTwigTemplate(), $event->getTwigVariables());

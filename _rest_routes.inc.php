@@ -9927,6 +9927,17 @@ RestConfig::$FHIR_ROUTE_MAP = array(
         return $return;
     },
 
+    "POST /fhir/MedicationRequest" => function (HttpRestRequest $request) {
+        (new SystemLogger())->debug("in post /fhir/MedicationRequestRoutes");
+        RestConfig::authorization_check("patients", "med");
+        $data = (array) (json_decode(file_get_contents("php://input"), true));
+        (new SystemLogger())->debug("DATA: ${data}");
+        
+        $return = (new FhirMedicationRequestRestController())->post($data);
+        RestConfig::apiLog($return, $data);
+        return $return;
+    },
+
     /**
      *  @OA\Get(
      *      path="/fhir/Observation",

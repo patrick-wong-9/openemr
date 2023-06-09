@@ -16,18 +16,46 @@ use OpenEMR\Services\FHIR\FhirMedicationRequestService;
 use OpenEMR\Services\FHIR\FhirResourcesService;
 use OpenEMR\RestControllers\RestControllerHelper;
 use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle\FHIRBundleEntry;
+use OpenEMR\Services\FHIR\FhirValidationService;
+use OpenEMR\Services\FHIR\Serialization\FhirMedicationRequestSerializer;
+use OpenEMR\Common\Logging\SystemLogger;
 
 class FhirMedicationRequestRestController
 {
     private $fhirService;
     private $fhirMedicationRequestService;
+    private $fhirValidate;
 
     public function __construct()
     {
         $this->fhirService = new FhirResourcesService();
         $this->fhirMedicationRequestService = new FhirMedicationRequestService();
+        $this->fhirValidate = new FhirValidationService();
     }
 
+    /**
+     * Creates a new FHIR MedicationRequest resource
+     * @param $fhirJson The FHIR MedicationRequest resource
+     * @returns 201 if the resource is created, 400 if the resource is invalid
+     */
+    public function post($fhirJson)
+    {
+        (new SystemLogger())->debug("start of post() in MR controller............................");
+       // (new SystemLogger())->debug(print_r($fhirJson));
+        // $fhirValidate = $this->fhirValidate->validate($fhirJson);
+        // (new SystemLogger())->debug("The debugger is here");
+        // (new SystemLogger())->debug("${fhirValidate}");
+        // if (!empty($fhirValidate)) {
+        //     return RestControllerHelper::responseHandler($fhirValidate, null, 400);
+        // }
+        //print_r($fhirJson);
+        $object = FhirMedicationRequestSerializer::deserialize($fhirJson);
+        print_r($object);
+       // (new SystemLogger())->debug(print_r($object));
+        $processingResult = $this->fhirMedicationRequestService->insert($object);
+        return RestControllerHelper::handleFhirProcessingResult($processingResult, 201);
+    }
+    
     /**
      * Queries for a single FHIR medication resource by FHIR id
      * @param $fhirId The FHIR medication resource id (uuid)

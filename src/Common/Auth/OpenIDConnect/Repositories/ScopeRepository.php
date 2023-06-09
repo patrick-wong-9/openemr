@@ -665,6 +665,7 @@ class ScopeRepository implements ScopeRepositoryInterface
                         $scopes_api['system/' . $scopeRead] = 'system/' . $scopeRead;
                         break;
                     case 'insert':
+                    case 'create':
                     case 'update':
                         $scopes_api['patient/' . $scopeWrite] = 'patient/' . $scopeWrite;
                         $scopes_api['user/' . $scopeWrite] = 'user/' . $scopeWrite;
