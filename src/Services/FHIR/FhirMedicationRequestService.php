@@ -132,7 +132,7 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
      */
     public function parseFhirResource(FhirDomainResource $fhirResource){
         (new SystemLogger())->debug("---------------------PARSE FHIR-----------------");
-        // (new SystemLogger())->debug(print_r($fhirResource, true));
+        (new SystemLogger())->debug(print_r($fhirResource, true));
         if(!$fhirResource instanceof FHIRMedicationRequest) {
             throw new \BadMethodCallException("fhir resource must be of type " . FHIRMedicationRequest::class);
         }
@@ -195,20 +195,18 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
             }
         }
 
+        (new SystemLogger())->debug("Medication Codeable Concept");
+        (new SystemLogger())->debug(print_r($fhirResource->getMedicationCodeableConcept()));
         $data['drug'] = null;
         if($fhirResource->getMedicationCodeableConcept() != null){
-            if(is_array($fhirResource->getMedicationCodeableConcept())){
-                foreach($fhirResource->getMedicationCodeableConcept() as $item){
-                    if($item->getCoding() != null && is_array($item->getCoding())){
-                        foreach($item->getCoding() as $cc){
-                            $data['drug']= $cc->getDisplay(); // using display for medication codeable concept instead of code itself.
-                            break;
-                        }
-                        break;
-                    }
+            if($fhirResource->getMedicationCodeableConcept()->getCoding() != null && is_array($fhirResource->getMedicationCodeableConcept()->getCoding())){
+                foreach($fhirResource->getMedicationCodeableConcept()->getCoding() as $item){
+                    $data['drug']= $item->getDisplay()->getValue(); // using display for medication codeable concept instead of code itself.
+                    break;
                 }
             }
         }
+        
 
         // $data['rxnorm_drugcode'] = rxnorm_drug code is too specific, need to handle SnowMed etc...
        
@@ -223,7 +221,7 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
         if($fhirResource->getDosageInstruction() != null){
             if(is_array($fhirResource->getDosageInstruction())){
                 foreach($fhirResource->getDosageInstruction() as $item){
-                    $data['drug_dosage_instructions'] = $item->getText();
+                    $data['drug_dosage_instructions'] = $item->getText()->getValue();
                 }
             }
         }

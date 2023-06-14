@@ -140,8 +140,8 @@
                 $codingItem = new FHIRCoding($cItem);
                 $codeableConcept->addCoding($codingItem);
             }
-            $codeableConcept->setText($text);
-            $medicationRequest->addCategory($codeableConcept);
+            $codeableConcept->setText(new FHIRString($text));
+            $medicationRequest->addReasonCode($codeableConcept);
         }
 
         // * @var \OpenEMR\FHIR\R4\FHIRElement\FHIRReference[]
@@ -172,10 +172,8 @@
 
         //* @var \OpenEMR\FHIR\R4\FHIRResource\FHIRDosage[]
         foreach($dosageInstruction as $item){
-            (new SystemLogger())->error("in DOSAGE INSTRUCTIONS FOR LOOP");
-            (new SystemLogger())->error(print_r($item, true));
-            (new SystemLogger())->error("end of DOSAGE INSTRUCTIONS FOR LOOP");
-            $medicationRequest->addDosageInstruction(UtilsService::createDosageInstructionFromArray($item));
+            $result = UtilsService::createDosageInstructionFromArray($item);
+            $medicationRequest->addDosageInstruction($result);
         }
 
         //     * @var \OpenEMR\FHIR\R4\FHIRElement\FHIRCanonical[]
@@ -211,13 +209,6 @@
             $medicationRequest->addAnnotation($ann);
         }
 
-        foreach($dosageInstruction as $item) {
-            $type = $item['type'] ?? [];
-            unset($item['type']);
-            $dosage = new FHIRDosage($type);
-            $medicationRequest->addDosageInstruction($dosage);
-        }
-
         // * @var \OpenEMR\FHIR\R4\FHIRElement\FHIRReference[]
         foreach ($detectedIssue as $item){
             $type = $item['type'] ?? [];
@@ -229,20 +220,24 @@
         foreach ($eventHistory as $item){
             $type = $item['type'] ?? [];
             $history = new FHIRReference($type);
-            $medicationRequest->addDetectedIssue($history);
+            $medicationRequest->addEventHistory($history);
         }
 
 
         $codeableConcept = new FHIRCodeableConcept();
         foreach ($medicationCodeableConcept['coding'] as $item) {
-            $temp = print_r($item, true);
-            (new SystemLogger())->debug($temp);
+            // (new SystemLogger())->debug("med CC loop");
+            // (new SystemLogger())->debug(print_r($item, true));
             $codingItem = new FHIRCoding();
             if(!empty($item['system'])) $codingItem->setSystem(new FHIRUri($item['system']));
             if(!empty($item['display'])) $codingItem->setDisplay(new FHIRString($item['display']));
             if(!empty($item['code'])) $codingItem->setCode(($item['code']));
+            (new SystemLogger())->debug(print_r($codingItem, true));
             $codeableConcept->addCoding($codingItem);
         }
+        
+        (new SystemLogger())->debug("medication codeable concept");
+        (new SystemLogger())->debug(print_r($codeableConcept, true));
         $medicationRequest->setMedicationCodeableConcept($codeableConcept);
 
         

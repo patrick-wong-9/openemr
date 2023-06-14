@@ -151,7 +151,7 @@ class UtilsService
         $maxDosePerLifetime = $array['maxDosePerLifetime'] ?? [];
 
         if(!empty($sequence)) $dosageInstruction->setSequence(new FHIRInteger($sequence));
-        if(!empty($text)) $dosageInstruction->setSequence(new FHIRString($text));
+        if(!empty($text)) $dosageInstruction->setText(new FHIRString($text));
         if(!empty($additionalInstruction)) {
             $dosageInstruction->addAdditionalInstruction(self::createCodeableConcept($additionalInstruction['coding']));
         }

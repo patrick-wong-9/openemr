@@ -43,16 +43,7 @@ class FhirMedicationRequestRestController
     {
         (new SystemLogger())->debug("start of post() in MR controller............................");
         $processingResult = new ProcessingResult();
-       // (new SystemLogger())->debug(print_r($fhirJson));
-        // $fhirValidate = $this->fhirValidate->validate($fhirJson);
-        // (new SystemLogger())->debug("The debugger is here");
-        // (new SystemLogger())->debug("${fhirValidate}");
-        // if (!empty($fhirValidate)) {
-        //     return RestControllerHelper::responseHandler($fhirValidate, null, 400);
-        // }
-        //print_r($fhirJson);
         $object = FhirMedicationRequestSerializer::deserialize($fhirJson);
-        print_r($object);
        // (new SystemLogger())->debug(print_r($object));
         $processingResult->addData($this->fhirMedicationRequestService->insert($object));
         
