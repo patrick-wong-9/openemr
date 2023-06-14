@@ -54,7 +54,8 @@ class FhirMedicationRequestRestController
         $object = FhirMedicationRequestSerializer::deserialize($fhirJson);
         print_r($object);
        // (new SystemLogger())->debug(print_r($object));
-        $processingResult = $this->fhirMedicationRequestService->insert($object);
+        $processingResult->addData($this->fhirMedicationRequestService->insert($object));
+        
         return RestControllerHelper::handleFhirProcessingResult($processingResult, 201);
     }
     

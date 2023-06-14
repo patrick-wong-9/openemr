@@ -47,7 +47,8 @@
       */
      public static function deserialize($fhirJson)
      {
-        (new SystemLogger())->debug("IN THE SERIALIZER LESSSS GOOOO");
+        (new SystemLogger())->debug("------------ DESERIALIZE ---------------------");
+        (new SystemLogger())->debug(print_r($fhirJson, true));
 
         $identifiers = $fhirJson['identifier'] ?? [];
         $categories = $fhirJson['category'] ?? [];
@@ -255,6 +256,11 @@
         // deserializing from JSON to FHIRClass objects works.
         $uuid = UtilsService::getUuidFromReferenceString($subject['reference']);
         $object = UtilsService::createRelativeReference($subject['type'], $uuid);
+
+        (new SystemLogger())->debug("*******************************");
+        (new SystemLogger())->debug(print_r($uuid, true));
+        (new SystemLogger())->debug(print_r($object, true));
+
         $medicationRequest->setSubject($object);
  
         $datetime_regex = "([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?";    

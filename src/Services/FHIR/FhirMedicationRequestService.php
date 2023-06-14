@@ -131,15 +131,20 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
      * @return array a mapped OpenEMR data record (array)
      */
     public function parseFhirResource(FhirDomainResource $fhirResource){
-        (new SystemLogger())->debug("--------------------------------------");
-        //(new SystemLogger())->debug(print_r($fhirResource));
+        (new SystemLogger())->debug("---------------------PARSE FHIR-----------------");
+        // (new SystemLogger())->debug(print_r($fhirResource, true));
         if(!$fhirResource instanceof FHIRMedicationRequest) {
             throw new \BadMethodCallException("fhir resource must be of type " . FHIRMedicationRequest::class);
         }
 
         // PARSING TO PRESCRIPTION
         $data = array();
-        $data['uuid'] = (string)$fhirResource->getId() ?? null;
+        $subject = null;
+        if($fhirResource->getSubject() != null){
+            $subject = UtilsService::getUuidFromReference($fhirResource->getSubject());
+        }   
+        (new SystemLogger())->debug(print_r($subject, true));
+        $data['puuid'] = $subject;
         /* potentially could be "requester" 
             filled_by_id
             pharmacy_id
@@ -206,13 +211,7 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
         }
 
         // $data['rxnorm_drugcode'] = rxnorm_drug code is too specific, need to handle SnowMed etc...
-
-        // grab subject which is FHIRReference
-        $data['uuid'] = $fhirResource->getSubject() == null ? null :
-            ($fhirResource->getSubject()->getIdentifier() == null ? null :
-            ($fhirResource->getSubject()->getIdentifier()->getValue() == null ? null : 
-            $fhirResource->getSubject()->getIdentifier()->getValue()));
-        
+       
         $data['date_added'] = $fhirResource->getAuthoredOn() == null ? null : 
             ($fhirResource->getAuthoredOn()->getValue() == null ? null : 
             $fhirResource->getAuthoredOn()->getValue());
@@ -231,6 +230,8 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
 
         $data['note'] = $fhirResource->getNote() == null ? null : 
             ($fhirResource->getNote()->getText() == null ? null : $fhirResource->getNote()->getText());
+
+        return $data;
     }
 
     /**

@@ -18,7 +18,7 @@ use OpenEMR\Services\Search\FhirSearchWhereClauseBuilder;
 use OpenEMR\Validators\ProcessingResult;
 use OpenEMR\Validators\BaseValidator;
 use OpenEMR\Validators\PatientValidator;
-
+use OpenEMR\Common\Logging\SystemLogger;
 class PrescriptionService extends BaseService
 {
     private const DRUGS_TABLE = "drugs";
@@ -258,6 +258,82 @@ class PrescriptionService extends BaseService
             $record = $this->createResultRecordFromDatabaseResult($row);
             $processingResult->addData($record);
         }
+        return $processingResult;
+    }
+
+    public function getPatientIdFromPuuid($puuid)
+    {
+        (new SystemLogger())->debug("Querying or Patient ID FROM UUID");
+        $pid = sqlQuery("SELECT id FROM patient_data WHERE uuid = ?", [$puuid]);
+ 
+        (new SystemLogger())->debug(print_r($pid, true));
+        return $pid['id'];
+    }
+
+        /**
+     * Insert a prescription record into the database
+     *
+     * returns the newly-created patient data array, or false in the case of
+     * an error with the sql insert
+     *
+     * @param $data
+     * @return false|int
+     */
+    public function databaseInsert($data)
+    {
+        (new SystemLogger())->debug("in databaseInsert()!");
+        (new SystemLogger())->debug(print_r($data, true));
+        (new SystemLogger())->debug("()()()()()()()()()()()()()()()()()()()()()");
+        $data['puuid'] = UuidRegistry::uuidToBytes($data['puuid']); // converting to binary
+        $data['uuid'] = (new UuidRegistry(['table_name' => 'prescriptions']))->createUuid();
+        $data['patient_id'] = $this->getPatientIdFromPuuid($data['puuid']) ?? null;
+        (new SystemLogger())->debug(print_r($data['puuid'], true));
+        (new SystemLogger())->debug(print_r($data['patient_id'], true));
+
+
+        // we should never be null here but for legacy reasons we are going to default to this
+        $createdBy = $_SESSION['authUserID'] ?? null; // we don't let anyone else but the current user be the createdBy
+        $data['created_by'] = $createdBy;
+        $data['updated_by'] = $createdBy; // for an insert this is the same
+
+        $query = $this->buildInsertColumns($data);
+        $sql = " INSERT INTO prescriptions SET ";
+        $sql .= $query['set'];
+
+        $results = sqlInsert($sql, $query['bind']);
+        $data['id'] = $results;
+
+        // If we have a result-set from our insert, return the PID,
+        // otherwise return false
+        if ($results) {
+            return $data;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Inserts a new patient record.
+     *
+     * @param $data The patient fields (array) to insert.
+     * @return ProcessingResult which contains validation messages, internal error messages, and the data
+     * payload.
+     */
+    public function insert($data)
+    {
+        $processingResult = new ProcessingResult();
+
+        $data = $this->databaseInsert($data);
+
+        if (false !== $data['id']) {
+            $processingResult->addData(array(
+                'id' => $data['id'],
+                'uuid' => UuidRegistry::uuidToString($data['uuid'])
+            ));
+        } else {
+            $processingResult->addInternalError("error processing SQL Insert");
+        }
+
         return $processingResult;
     }
 
