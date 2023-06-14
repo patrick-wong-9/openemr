@@ -112,10 +112,10 @@
             $coding = $item['coding'] ?? [];
             $text = $item['text'] ?? [];
             foreach ($coding as $cItem) {
-                $codingItem = new FHIRCoding($cItem);
+                $codingItem = UtilsService::createCoding($cItem['code'], $cItem['display'], $cItem['system']);
                 $codeableConcept->addCoding($codingItem);
             }
-            $codeableConcept->setText($text);
+            $codeableConcept->setText(new FHIRString($text));
             $medicationRequest->addCategory($codeableConcept);
         }
 

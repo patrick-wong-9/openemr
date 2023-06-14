@@ -19,6 +19,7 @@ use OpenEMR\FHIR\R4\FHIRResource\FHIRBundle\FHIRBundleEntry;
 use OpenEMR\Services\FHIR\FhirValidationService;
 use OpenEMR\Services\FHIR\Serialization\FhirMedicationRequestSerializer;
 use OpenEMR\Common\Logging\SystemLogger;
+use OpenEMR\Validators\ProcessingResult;
 
 class FhirMedicationRequestRestController
 {
@@ -41,6 +42,7 @@ class FhirMedicationRequestRestController
     public function post($fhirJson)
     {
         (new SystemLogger())->debug("start of post() in MR controller............................");
+        $processingResult = new ProcessingResult();
        // (new SystemLogger())->debug(print_r($fhirJson));
         // $fhirValidate = $this->fhirValidate->validate($fhirJson);
         // (new SystemLogger())->debug("The debugger is here");

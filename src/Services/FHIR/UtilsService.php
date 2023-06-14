@@ -29,6 +29,7 @@ use OpenEMR\FHIR\R4\FHIRElement\FHIREventTiming;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRExtension;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRHumanName;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRIdentifier;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRInteger;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRIssueSeverity;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRIssueType;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRMeta;
@@ -39,6 +40,7 @@ use OpenEMR\FHIR\R4\FHIRElement\FHIRQuantity;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRRatio;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRReference;
 use OpenEMR\FHIR\R4\FHIRResource\FHIROperationOutcome\FHIROperationOutcomeIssue;
+use OpenEMR\FHIR\R4\FHIRElement\FHIRString;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRTime;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRUnitsOfTime;
 use OpenEMR\FHIR\R4\FHIRElement\FHIRUnsignedInt;
@@ -174,7 +176,7 @@ class UtilsService
                     $dosageInstruction->addDoseAndRate(self::createDosageDoseAndRateFromArray($item));
                 }
             } else {
-                (new SystemLogger()->error("DOSE AND RATE IS NOT AN ARRAY"));
+                (new SystemLogger())->error("DOSE AND RATE IS NOT AN ARRAY");
             }
         }
         if(!empty($maxDosePerPeriod)) $dosageInstruction->setMaxDosePerPeriod(self::createRatioFromArray($maxDosePerPeriod));
@@ -311,7 +313,7 @@ class UtilsService
 
         if(!empty($low)) $range->setLow(self::createQuantityFromArray($low));
         if(!empty($high)) $range->setLow(self::createQuantityFromArray($high));
-        return $range
+        return $range;
     }
 
     public static function createPeriodFromArray($array){
@@ -352,7 +354,7 @@ class UtilsService
         }
         if(!empty($repeat)) $timing->setRepeat(self::createTimingRepeatFromArray($repeat));
         if(!empty($code)){
-            $timing->setCode(self::createCodeableConcept($code['coding']))
+            $timing->setCode(self::createCodeableConcept($code['coding']));
         }
 
         return $timing;
@@ -449,9 +451,13 @@ class UtilsService
         }
         // make sure there are no whitespaces.
         $coding = new FHIRCoding();
-        $coding->setCode($code);
-        $coding->setDisplay(trim($display ?? ""));
-        $coding->setSystem(trim($system ?? ""));
+        $coding->setCode(new FHIRCode($code));
+        $coding->setDisplay(new FHIRString(trim($display ?? "")));
+        $coding->setSystem(new FHIRString(trim($system ?? "")));
+        (new SystemLogger())->debug("In UtilsService->createCoding()");
+
+        (new SystemLogger())->debug($coding->getCode()->getValue());
+
         return $coding;
     }
 
