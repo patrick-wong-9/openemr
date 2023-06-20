@@ -195,14 +195,11 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
             }
         }
 
-        (new SystemLogger())->debug("Medication Codeable Concept");
-        (new SystemLogger())->debug(print_r($fhirResource->getMedicationCodeableConcept()));
         $data['drug'] = null;
         if($fhirResource->getMedicationCodeableConcept() != null){
             if($fhirResource->getMedicationCodeableConcept()->getCoding() != null && is_array($fhirResource->getMedicationCodeableConcept()->getCoding())){
                 foreach($fhirResource->getMedicationCodeableConcept()->getCoding() as $item){
                     $data['drug']= $item->getDisplay()->getValue(); // using display for medication codeable concept instead of code itself.
-                    break;
                 }
             }
         }

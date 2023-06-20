@@ -281,20 +281,28 @@ class PrescriptionService extends BaseService
      */
     public function databaseInsert($data)
     {
-        (new SystemLogger())->debug("in databaseInsert()!");
-        (new SystemLogger())->debug(print_r($data, true));
-        (new SystemLogger())->debug("()()()()()()()()()()()()()()()()()()()()()");
+        // (new SystemLogger())->debug("in databaseInsert()!");
+        // (new SystemLogger())->debug(print_r($data, true));
+        // (new SystemLogger())->debug("()()()()()()()()()()()()()()()()()()()()()");
         $data['puuid'] = UuidRegistry::uuidToBytes($data['puuid']); // converting to binary
         $data['uuid'] = (new UuidRegistry(['table_name' => 'prescriptions']))->createUuid();
         $data['patient_id'] = $this->getPatientIdFromPuuid($data['puuid']) ?? null;
         (new SystemLogger())->debug(print_r($data['puuid'], true));
         (new SystemLogger())->debug(print_r($data['patient_id'], true));
 
+        //$data['dosage'] = $data['']
 
+        $date['quantity'] = $data['']
         // we should never be null here but for legacy reasons we are going to default to this
         $createdBy = $_SESSION['authUserID'] ?? null; // we don't let anyone else but the current user be the createdBy
         $data['created_by'] = $createdBy;
         $data['updated_by'] = $createdBy; // for an insert this is the same
+
+        // The 'date_added' is the date_modified, and 'updated_datae' is the created-date
+        // so set both to the current datetime.
+        $data['date_added'] = date("Y-m-d H:i:s");
+        $data['date_modified'] = date("Y-m-d H:i:s");
+ 
 
         $query = $this->buildInsertColumns($data);
         $sql = " INSERT INTO prescriptions SET ";
