@@ -462,16 +462,22 @@ class UtilsService
     }
 
     public static function createCodeableConcept(array $diagnosisCodes, $defaultCodeSystem = "", $defaultDisplay = ""): FHIRCodeableConcept
-    {
+    {   
+
         $diagnosisCode = new FHIRCodeableConcept();
         foreach ($diagnosisCodes as $code => $codeValues) {
             $codeSystem = $codeValues['system'] ?? $defaultCodeSystem;
             if (!empty($codeValues['description'])) {
                 $diagnosisCode->addCoding(self::createCoding($code, $codeValues['description'], $codeSystem));
-            } else {
+            } else if (!empty($codeValues['display'])){
+                $diagnosisCode->addCoding(self::createCoding($code, $codeValues['display'], $codeSystem));
+            }
+            else {
                 $diagnosisCode->addCoding(self::createCoding($code, $defaultDisplay, $codeSystem));
             }
+            
         }
+
         return $diagnosisCode;
     }
 

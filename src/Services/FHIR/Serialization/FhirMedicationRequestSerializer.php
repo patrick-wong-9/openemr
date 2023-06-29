@@ -173,6 +173,8 @@
         //* @var \OpenEMR\FHIR\R4\FHIRResource\FHIRDosage[]
         foreach($dosageInstruction as $item){
             $result = UtilsService::createDosageInstructionFromArray($item);
+            (new SystemLogger())->debug("in dosageInstruction for looop in deserializer");
+            (new SystemLogger())->debug(print_r($result, true));
             $medicationRequest->addDosageInstruction($result);
         }
 

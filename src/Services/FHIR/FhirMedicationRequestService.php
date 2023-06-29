@@ -204,7 +204,6 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
             }
         }
         
-
         // $data['rxnorm_drugcode'] = rxnorm_drug code is too specific, need to handle SnowMed etc...
        
         $data['date_added'] = $fhirResource->getAuthoredOn() == null ? null : 
@@ -219,6 +218,21 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
             if(is_array($fhirResource->getDosageInstruction())){
                 foreach($fhirResource->getDosageInstruction() as $item){
                     $data['drug_dosage_instructions'] = $item->getText()->getValue();
+
+                    foreach($item->getRoute()->getCoding() as $coding){
+                        // sql statement to get db seq number
+                        if($coding->getDisplay() != null ){
+                            $data['route'] = $coding->getDisplay()->getValue();
+                        }
+                    }
+
+                    foreach($item->getDoseAndRate() as $DDAR_item){
+                        (new SystemLogger())->debug("DDAR_item");
+                        (new SystemLogger())->debug(print_r($DDAR_item->getDoseQuantity()->getValue()->getValue(), true));
+                        (new SystemLogger())->debug("DDAR_item");
+                        $data['quantity'] = $DDAR_item->getDoseQuantity()->getValue()->getValue();
+                        $data['dosage'] = $data['quantity'];
+                    }
                 }
             }
         }

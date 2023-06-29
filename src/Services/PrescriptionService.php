@@ -261,13 +261,29 @@ class PrescriptionService extends BaseService
         return $processingResult;
     }
 
+    /*
+    * This function takes the patient uuid and " 
+    * and returns the seq number, from the list_options table, for prescriptions.
+    */
     public function getPatientIdFromPuuid($puuid)
     {
-        (new SystemLogger())->debug("Querying or Patient ID FROM UUID");
+        (new SystemLogger())->debug("Querying for Patient ID FROM UUID");
         $pid = sqlQuery("SELECT id FROM patient_data WHERE uuid = ?", [$puuid]);
- 
         (new SystemLogger())->debug(print_r($pid, true));
         return $pid['id'];
+    }
+
+    /*
+    * This function takes the string such as "bymouth", "inhale", "intradermal" 
+    * and returns the seq number, from the list_options table, for prescriptions.
+    */
+    public function getRouteIdFromListOption($route_string)
+    {
+        if(!is_string($route_string)) return null;
+        (new SystemLogger())->debug("Querying for seq ID FROM MR route");
+        $res = sqlQuery("SELECT list_id, seq FROM list_options WHERE `list_id`='drug_route' and `option_id`= ?", [$route_string]);
+        (new SystemLogger())->debug(print_r($res['seq'], true));
+        return $res['seq'];
     }
 
         /**
@@ -281,28 +297,26 @@ class PrescriptionService extends BaseService
      */
     public function databaseInsert($data)
     {
-        // (new SystemLogger())->debug("in databaseInsert()!");
-        // (new SystemLogger())->debug(print_r($data, true));
-        // (new SystemLogger())->debug("()()()()()()()()()()()()()()()()()()()()()");
         $data['puuid'] = UuidRegistry::uuidToBytes($data['puuid']); // converting to binary
         $data['uuid'] = (new UuidRegistry(['table_name' => 'prescriptions']))->createUuid();
         $data['patient_id'] = $this->getPatientIdFromPuuid($data['puuid']) ?? null;
         (new SystemLogger())->debug(print_r($data['puuid'], true));
         (new SystemLogger())->debug(print_r($data['patient_id'], true));
+        if($data['route'] != null && is_string($data['route'])){
+            $data['route'] = $this->getRouteIdFromListOption($data['route']);
+        }
 
-        //$data['dosage'] = $data['']
-
-        $date['quantity'] = $data['']
         // we should never be null here but for legacy reasons we are going to default to this
         $createdBy = $_SESSION['authUserID'] ?? null; // we don't let anyone else but the current user be the createdBy
-        $data['created_by'] = $createdBy;
-        $data['updated_by'] = $createdBy; // for an insert this is the same
+        if($createdBy != null) {
+            $data['created_by'] = $createdBy;
+            $data['updated_by'] = $createdBy; // for an insert this is the same
+        }
 
         // The 'date_added' is the date_modified, and 'updated_datae' is the created-date
         // so set both to the current datetime.
         $data['date_added'] = date("Y-m-d H:i:s");
         $data['date_modified'] = date("Y-m-d H:i:s");
- 
 
         $query = $this->buildInsertColumns($data);
         $sql = " INSERT INTO prescriptions SET ";
