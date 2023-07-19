@@ -326,18 +326,6 @@ class UtilsService
         if(!empty($end)) $period->setStart(new FHIRDateTime($end));
     }
 
-    // public static function createCodeableConceptFromArray($array){
-    //     $codeableConcept = new FHIRCodeableConcept();
-
-    //     $coding = $array['coding'] ?? [];
-    //     $text = $array['text'] ?? [];
-        
-    //     if(is_array($coding)){
-
-    //     }
-    //     return $codeableConcept;
-    // }
-
     public static function createTimingFromArray($array){
         $timing = new FHIRTiming();
         $event = $array['event'] ?? [];

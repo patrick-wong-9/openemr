@@ -33,7 +33,7 @@ class SystemLogger implements LoggerInterface
         // Override switch (this allows hard-coded setting of log level since there are several
         //  cases that are outside of the globals context if the developer needs to turn on
         //  DEBUG for them)
-        $logLevel = Logger::DEBUG;
+        // $logLevel = Logger::DEBUG;
 
         // Set log level per global setting (if set) if not hardcoded above
         if (empty($logLevel)) {

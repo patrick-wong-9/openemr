@@ -89,7 +89,7 @@
 
         
         // TODO: better way to do this would be modifying the FHIRResource classes themselves to iterate
-        // Doing this just for testing purposes first.
+        // However touching the FHIR Resource classes requires a massive PR. Utilizing UtilsService.php when possible.
         $medicationRequest = new FHIRMedicationRequest($fhirJson);
 
         // * @var \OpenEMR\FHIR\R4\FHIRElement\FHIRIdentifier[]
@@ -172,9 +172,9 @@
 
         //* @var \OpenEMR\FHIR\R4\FHIRResource\FHIRDosage[]
         foreach($dosageInstruction as $item){
+            // (new SystemLogger())->debug("in dosageInstruction for loop in deserializer");
+            // (new SystemLogger())->debug(print_r($result, true));
             $result = UtilsService::createDosageInstructionFromArray($item);
-            (new SystemLogger())->debug("in dosageInstruction for looop in deserializer");
-            (new SystemLogger())->debug(print_r($result, true));
             $medicationRequest->addDosageInstruction($result);
         }
 

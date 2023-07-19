@@ -244,9 +244,5 @@ $viewArgs = [
 $ed = $GLOBALS['kernel']->getEventDispatcher();
 
 $templatePageEvent = new TemplatePageEvent('login/login.php', [], $layout, $viewArgs);
-(new SystemLogger())->error("-------------------------------");
-(new SystemLogger())->error($templatePageEvent->getTwigTemplate());
 $event = $ed->dispatch($templatePageEvent, TemplatePageEvent::RENDER_EVENT);
-(new SystemLogger())->error($event->getTwigTemplate());
-(new SystemLogger())->error("IN LOGIN.PHP");
 echo $t->render($event->getTwigTemplate(), $event->getTwigVariables());
