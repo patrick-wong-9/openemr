@@ -302,6 +302,7 @@ use OpenEMR\RestControllers\MessageRestController;
 use OpenEMR\RestControllers\PrescriptionRestController;
 use OpenEMR\RestControllers\ProcedureRestController;
 use OpenEMR\RestControllers\TransactionRestController;
+use OpenEMR\Common\Logging\SystemLogger;
 
 // Note some Http clients may not send auth as json so a function
 // is implemented to determine and parse encoding on auth route's.
@@ -9924,6 +9925,17 @@ RestConfig::$FHIR_ROUTE_MAP = array(
             $return = (new FhirMedicationRequestRestController())->getOne($uuid);
         }
         RestConfig::apiLog($return);
+        return $return;
+    },
+
+    "POST /fhir/MedicationRequest" => function (HttpRestRequest $request) {
+        (new SystemLogger())->debug("in post /fhir/MedicationRequestRoutes");
+        RestConfig::authorization_check("patients", "med");
+        $data = (array) (json_decode(file_get_contents("php://input"), true));
+        (new SystemLogger())->debug("DATA: ${data}");
+        
+        $return = (new FhirMedicationRequestRestController())->post($data);
+        RestConfig::apiLog($return, $data);
         return $return;
     },
 

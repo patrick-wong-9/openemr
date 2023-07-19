@@ -18,7 +18,7 @@ use OpenEMR\Services\Search\FhirSearchWhereClauseBuilder;
 use OpenEMR\Validators\ProcessingResult;
 use OpenEMR\Validators\BaseValidator;
 use OpenEMR\Validators\PatientValidator;
-
+use OpenEMR\Common\Logging\SystemLogger;
 class PrescriptionService extends BaseService
 {
     private const DRUGS_TABLE = "drugs";
@@ -258,6 +258,104 @@ class PrescriptionService extends BaseService
             $record = $this->createResultRecordFromDatabaseResult($row);
             $processingResult->addData($record);
         }
+        return $processingResult;
+    }
+
+    /*
+    * This function takes the patient uuid and " 
+    * and returns the seq number, from the list_options table, for prescriptions.
+    */
+    public function getPatientIdFromPuuid($puuid)
+    {
+        (new SystemLogger())->debug("Querying for Patient ID FROM UUID");
+        $pid = sqlQuery("SELECT id FROM patient_data WHERE uuid = ?", [$puuid]);
+        (new SystemLogger())->debug(print_r($pid, true));
+        return $pid['id'];
+    }
+
+    /*
+    * This function takes the string such as "bymouth", "inhale", "intradermal" 
+    * and returns the seq number, from the list_options table, for prescriptions.
+    */
+    public function getRouteIdFromListOption($route_string)
+    {
+        if(!is_string($route_string)) return null;
+        (new SystemLogger())->debug("Querying for seq ID FROM MR route");
+        $res = sqlQuery("SELECT list_id, seq FROM list_options WHERE `list_id`='drug_route' and `option_id`= ?", [$route_string]);
+        (new SystemLogger())->debug(print_r($res['seq'], true));
+        return $res['seq'];
+    }
+
+        /**
+     * Insert a prescription record into the database
+     *
+     * returns the newly-created patient data array, or false in the case of
+     * an error with the sql insert
+     *
+     * @param $data
+     * @return false|int
+     */
+    public function databaseInsert($data)
+    {
+        $data['puuid'] = UuidRegistry::uuidToBytes($data['puuid']); // converting to binary
+        $data['uuid'] = (new UuidRegistry(['table_name' => 'prescriptions']))->createUuid();
+        $data['patient_id'] = $this->getPatientIdFromPuuid($data['puuid']) ?? null;
+        (new SystemLogger())->debug(print_r($data['puuid'], true));
+        (new SystemLogger())->debug(print_r($data['patient_id'], true));
+        if($data['route'] != null && is_string($data['route'])){
+            $data['route'] = $this->getRouteIdFromListOption($data['route']);
+        }
+
+        // we should never be null here but for legacy reasons we are going to default to this
+        $createdBy = $_SESSION['authUserID'] ?? null; // we don't let anyone else but the current user be the createdBy
+        if($createdBy != null) {
+            $data['created_by'] = $createdBy;
+            $data['updated_by'] = $createdBy; // for an insert this is the same
+        }
+
+        // The 'date_added' is the date_modified, and 'updated_datae' is the created-date
+        // so set both to the current datetime.
+        $data['date_added'] = date("Y-m-d H:i:s");
+        $data['date_modified'] = date("Y-m-d H:i:s");
+
+        $query = $this->buildInsertColumns($data);
+        $sql = " INSERT INTO prescriptions SET ";
+        $sql .= $query['set'];
+
+        $results = sqlInsert($sql, $query['bind']);
+        $data['id'] = $results;
+
+        // If we have a result-set from our insert, return the PID,
+        // otherwise return false
+        if ($results) {
+            return $data;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Inserts a new patient record.
+     *
+     * @param $data The patient fields (array) to insert.
+     * @return ProcessingResult which contains validation messages, internal error messages, and the data
+     * payload.
+     */
+    public function insert($data)
+    {
+        $processingResult = new ProcessingResult();
+
+        $data = $this->databaseInsert($data);
+
+        if (false !== $data['id']) {
+            $processingResult->addData(array(
+                'id' => $data['id'],
+                'uuid' => UuidRegistry::uuidToString($data['uuid'])
+            ));
+        } else {
+            $processingResult->addInternalError("error processing SQL Insert");
+        }
+
         return $processingResult;
     }
 

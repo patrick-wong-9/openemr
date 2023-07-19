@@ -27,6 +27,8 @@ use OpenEMR\Services\Search\FhirSearchParameterDefinition;
 use OpenEMR\Services\Search\SearchFieldType;
 use OpenEMR\Services\Search\ServiceField;
 use OpenEMR\Validators\ProcessingResult;
+use OpenEMR\FHIR\R4\FHIRResource\FHIRDomainResource;
+use OpenEMR\Common\Logging\SystemLogger;
 
 /**
  * NOTE: when making modifications to this class follow all the guidance in the US Core Medication List guidance
@@ -44,13 +46,23 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
 
     private $medicationRequestIdCounter = 1;
 
-    const MEDICATION_REQUEST_STATUS_COMPLETED = "completed";
-    const MEDICATION_REQUEST_STATUS_STOPPED = "stopped";
     const MEDICATION_REQUEST_STATUS_ACTIVE = "active";
+    const MEDICATION_REQUEST_STATUS_ON_HOLD = "on-hold";
+    const MEDICATION_REQUEST_STATUS_CANCELLED = "cancelled";
+    const MEDICATION_REQUEST_STATUS_COMPLETED = "completed";
+    const MEDICATION_REQUEST_STATUS_ENTERED_IN_ERROR = "entered-in-error";
+    const MEDICATION_REQUEST_STATUS_STOPPED = "stopped";
+    const MEDICATION_REQUEST_STATUS_DRAFT = "draft";
     const MEDICATION_REQUEST_STATUS_UNKNOWN = "unknown";
 
+    const MEDICATION_REQUEST_INTENT_PROPOSAL = "proposal";
     const MEDICATION_REQUEST_INTENT_PLAN = "plan";
     const MEDICATION_REQUEST_INTENT_ORDER = "order";
+    const MEDICATION_REQUEST_INTENT_ORIGINAL_ORDER = "original_order";
+    const MEDICATION_REQUEST_INTENT_REFLEX_ORDER = "reflex-order";
+    const MEDICATION_REQUEST_INTENT_FILLER_ORDER = "filler-order";
+    const MEDICATION_REQUEST_INTENT_INSTANCE_ORDER = "instance-order";
+    const MEDICATION_REQUEST_INTENT_OPTION = "option";
 
     /**
      * Constants for the reported flag or reference signaling that information is from a secondary source such as a patient
@@ -110,6 +122,136 @@ class FhirMedicationRequestService extends FhirServiceBase implements IResourceU
             'status' => new FhirSearchParameterDefinition('status', SearchFieldType::TOKEN, ['status']),
             '_id' => new FhirSearchParameterDefinition('uuid', SearchFieldType::TOKEN, [new ServiceField('uuid', ServiceField::TYPE_UUID)]),
         ];
+    }
+
+    /**
+     * Parses a FHIR Medication Request Resource, returning equivalent OpenEMR patient record.
+     *
+     * @param array $fhirResource The source FHIR resource
+     * @return array a mapped OpenEMR data record (array)
+     */
+    public function parseFhirResource(FhirDomainResource $fhirResource){
+        (new SystemLogger())->debug("---------------------PARSE FHIR-----------------");
+        (new SystemLogger())->debug(print_r($fhirResource, true));
+        if(!$fhirResource instanceof FHIRMedicationRequest) {
+            throw new \BadMethodCallException("fhir resource must be of type " . FHIRMedicationRequest::class);
+        }
+
+        // PARSING TO PRESCRIPTION
+        $data = array();
+        $subject = null;
+        if($fhirResource->getSubject() != null){
+            $subject = UtilsService::getUuidFromReference($fhirResource->getSubject());
+        }   
+        (new SystemLogger())->debug(print_r($subject, true));
+        $data['puuid'] = $subject;
+        /* potentially could be "requester" 
+            filled_by_id
+            pharmacy_id
+            provider_id
+        */
+
+        $validStatii = [
+        self::MEDICATION_REQUEST_STATUS_ACTIVE,
+        self::MEDICATION_REQUEST_STATUS_ON_HOLD,
+        self::MEDICATION_REQUEST_STATUS_CANCELLED,
+        self::MEDICATION_REQUEST_STATUS_COMPLETED,
+        self::MEDICATION_REQUEST_STATUS_ENTERED_IN_ERROR,
+        self::MEDICATION_REQUEST_STATUS_STOPPED,
+        self::MEDICATION_REQUEST_STATUS_DRAFT,
+        ];
+
+        $data['intent'] = array_search($fhirResource->getStatus(), $validStatii) ? 
+        (string)$fhirResource->getStatus() : self::MEDICATION_REQUEST_STATUS_UNKNOWN;
+
+        $validIntents = [
+        self::MEDICATION_REQUEST_INTENT_PROPOSAL,
+        self::MEDICATION_REQUEST_INTENT_PLAN,
+        self::MEDICATION_REQUEST_INTENT_ORDER,
+        self::MEDICATION_REQUEST_INTENT_ORIGINAL_ORDER,
+        self::MEDICATION_REQUEST_INTENT_REFLEX_ORDER,
+        self::MEDICATION_REQUEST_INTENT_FILLER_ORDER,
+        self::MEDICATION_REQUEST_INTENT_INSTANCE_ORDER,
+        self::MEDICATION_REQUEST_INTENT_OPTION
+        ];
+
+        $data['intent'] = array_search($fhirResource->getIntent(), $validIntents) ? 
+        (string)$fhirResource->getIntent() : self::MEDICATION_REQUEST_INTENT_PLAN;
+
+        // currently only takes one category and saves it to the db
+        $data['category'] = null;
+        if($fhirResource->getCategory() != null){
+            if(is_array($fhirResource->getCategory())){
+                foreach($fhirResource->getCategory() as $item){
+                    if($item->getCoding() != null && is_array($item->getCoding())){
+                        foreach($item->getCoding() as $cc){
+                            $data['category']= $cc->getCode();
+                            break;
+                        }
+                        break;
+                    } 
+
+                }
+            }
+        }
+
+        $data['drug'] = null;
+        if($fhirResource->getMedicationCodeableConcept() != null){
+            if($fhirResource->getMedicationCodeableConcept()->getCoding() != null && is_array($fhirResource->getMedicationCodeableConcept()->getCoding())){
+                foreach($fhirResource->getMedicationCodeableConcept()->getCoding() as $item){
+                    $data['drug']= $item->getDisplay()->getValue(); // using display for medication codeable concept instead of code itself.
+                }
+            }
+        }
+        
+        // $data['rxnorm_drugcode'] = rxnorm_drug code is too specific, need to handle SnowMed etc...
+       
+        $data['date_added'] = $fhirResource->getAuthoredOn() == null ? null : 
+            ($fhirResource->getAuthoredOn()->getValue() == null ? null : 
+            $fhirResource->getAuthoredOn()->getValue());
+
+        // $data['provider_id'] = this doesn't make sense unless sqlSearch for provider_ids
+        // not sure which table provider_id is stored in
+
+        $data['drug_dosage_instructions'] = null;
+        if($fhirResource->getDosageInstruction() != null){
+            if(is_array($fhirResource->getDosageInstruction())){
+                foreach($fhirResource->getDosageInstruction() as $item){
+                    $data['drug_dosage_instructions'] = $item->getText()->getValue();
+
+                    foreach($item->getRoute()->getCoding() as $coding){
+                        // sql statement to get db seq number
+                        if($coding->getDisplay() != null ){
+                            $data['route'] = $coding->getDisplay()->getValue();
+                        }
+                    }
+
+                    foreach($item->getDoseAndRate() as $DDAR_item){
+                        (new SystemLogger())->debug("DDAR_item");
+                        (new SystemLogger())->debug(print_r($DDAR_item->getDoseQuantity()->getValue()->getValue(), true));
+                        (new SystemLogger())->debug("DDAR_item");
+                        $data['quantity'] = $DDAR_item->getDoseQuantity()->getValue()->getValue();
+                        $data['dosage'] = $data['quantity'];
+                    }
+                }
+            }
+        }
+
+        $data['note'] = $fhirResource->getNote() == null ? null : 
+            ($fhirResource->getNote()->getText() == null ? null : $fhirResource->getNote()->getText());
+
+        return $data;
+    }
+
+    /**
+     * Inserts an OpenEMR record into the sytem.
+     *
+     * @param array $openEmrRecord OpenEMR Prescription record
+     * @return ProcessingResult
+     */
+    public function insertOpenEMRRecord($openEmrRecord)
+    {
+        return $this->prescriptionService->insert($openEmrRecord);
     }
 
     /**
